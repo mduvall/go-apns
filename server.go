@@ -2,7 +2,6 @@ package apns
 
 import (
 	"os"
-	"path"
 )
 
 const (
@@ -14,27 +13,43 @@ const (
 	FEEDBACK_SERVER_PORT             = 2196
 )
 
+// Provides generic configuration, provision of cert, and notification API
 type server struct {
 	Host         string
 	Port         int
 	FeedbackHost string
 	FeedbackPort int
+	APNSService  *service
 }
 
-// Service is responsible for certificate handling and implementing rw protocol
-type Service struct {
-	Certificate *File
+// Service is responsible for certificate handling
+// and implementing rw protocol for notification
+type service struct {
+	Certificate *os.File
 }
 
-type ServiceProtocol interface {
+type serviceProtocol interface {
 	Write() bool
 	Read() string
 }
 
-func NewServer(environment string, path string) *server {
+func NewServer(environment string, filePath string) (createdServer *server, err error) {
 	host := getEnvironment(environment)
+	createdService, err := newService(filePath)
+	if err != nil {
+		return nil, err
+	}
 
-	return &server{Host: host, Port: APNS_SERVER_PORT}
+	return &server{Host: host, Port: APNS_SERVER_PORT, APNSService: createdService}, nil
+}
+
+func newService(filePath string) (createdService *service, err error) {
+	file, err := os.Open(filePath)
+	if err != nil {
+		return nil, err
+	}
+
+	return &service{Certificate: file}, nil
 }
 
 func getEnvironment(environment string) (host string) {
