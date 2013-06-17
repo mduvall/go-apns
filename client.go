@@ -27,6 +27,17 @@ func (c *Client) Provision(appId string, certificatePath string, environment str
 	}
 }
 
-func (c *Client) Notify(appId string, tokens []string, notifications map[string]string) {
+func (c *Client) Notify(appId string, notification *Notification) {
+	// @TODO(mduvall): consolidate these param settings, not sure what to use here
+	postParams := make(url.Values)
+	postParams.Set("appId", appId)
+	postParams.Set("token", notification.Token)
+	postParams.Set("payload", string(notification.Payload))
+	postParams.Set("identifier", string(notification.Identifier))
 
+	_, err := http.PostForm(c.ServerHost+"/notify/", postParams)
+
+	if err != nil {
+		log.Fatal("notification was unsuccessful")
+	}
 }

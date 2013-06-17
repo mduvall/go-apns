@@ -45,11 +45,26 @@ func NewServer(environment string, filePath string) (createdServer *server, err 
 }
 
 func (s *server) ListenForClients() {
-	http.HandleFunc("/provision/", provisionHandler)
+	http.HandleFunc("/provision/", s.provisionHandler)
+	http.HandleFunc("/notify/", s.notificationHandler)
 	http.ListenAndServe(":8080", nil)
 }
 
-func provisionHandler(w http.ResponseWriter, r *http.Request) {
+func (s *server) provisionHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	pf := r.PostForm
+
+	_, certificatePath, _ := pf["appId"], pf["certificatePath"], pf["environment"]
+
+	s.APNSService.Certificate = certificatePath[0]
+}
+
+func (s *server) notificationHandler(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	pf := r.PostForm
+
+	notification := &Notification{Token: string(pf["token"][0]), Payload: []byte(pf["payload"][0]), Identifier: pf["identifier"][0]}
+	s.Write(notification)
 }
 
 // Opens a TLS connection with the certificate
