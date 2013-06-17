@@ -2,7 +2,9 @@ package apns
 
 import (
 	"crypto/tls"
+	"fmt"
 	"log"
+	"net/http"
 )
 
 const (
@@ -38,8 +40,17 @@ func NewServer(environment string, filePath string) (createdServer *server, err 
 		return nil, err
 	}
 	createdServer.APNSService = createdService
+	createdServer.ListenForClients()
 
 	return createdServer, nil
+}
+
+func (s *server) ListenForClients() {
+	http.HandleFunc("/provision/", provisionHandler)
+	http.ListenAndServe(":8080", nil)
+}
+
+func provisionHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Opens a TLS connection with the certificate
