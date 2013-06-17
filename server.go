@@ -1,12 +1,8 @@
 package apns
 
 import (
-	"bytes"
 	"crypto/tls"
-	"encoding/binary"
-	"encoding/hex"
 	"log"
-	"time"
 )
 
 const (
@@ -17,12 +13,6 @@ const (
 	FEEDBACK_SERVER_HOSTNAME         = "feedback.push.apple.com"
 	FEEDBACK_SERVER_PORT             = "2196"
 )
-
-type Notification struct {
-	Token      string
-	Payload    []byte
-	Identifier int
-}
 
 // Provides generic configuration, provision of cert, and notification API
 type server struct {
@@ -78,26 +68,6 @@ func (s *server) Write(notification *Notification) (err error) {
 	}
 
 	return nil
-}
-
-func (n *Notification) constructBytePackage() []byte {
-	tokenbin, err := hex.DecodeString(n.Token)
-	if err != nil {
-		log.Fatal("invalid device token")
-	}
-
-	expiry := time.Now().Add(time.Duration(0) * time.Second).Unix()
-
-	buff := bytes.NewBuffer([]byte{})
-	binary.Write(buff, binary.BigEndian, uint8(1))
-	binary.Write(buff, binary.BigEndian, uint32(n.Identifier))
-	binary.Write(buff, binary.BigEndian, uint32(expiry))
-	binary.Write(buff, binary.BigEndian, uint16(len(tokenbin)))
-	binary.Write(buff, binary.BigEndian, tokenbin)
-	binary.Write(buff, binary.BigEndian, uint16(len(n.Payload)))
-	binary.Write(buff, binary.BigEndian, n.Payload)
-
-	return buff.Bytes()
 }
 
 func (s *server) newService(filePath string, host string) (createdService *service, err error) {
