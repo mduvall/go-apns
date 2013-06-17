@@ -1,21 +1,13 @@
 package apns
 
 import (
-	"bytes"
-	"encoding/json"
 	"log"
 	"net/http"
+	"net/url"
 )
 
 type Client struct {
 	ServerHost string
-	Config     provisionConfig
-}
-
-type provisionConfig struct {
-	AppId           string
-	CertificatePath string
-	Environment     string
 }
 
 func (c *Client) Configure(host string) {
@@ -23,14 +15,12 @@ func (c *Client) Configure(host string) {
 }
 
 func (c *Client) Provision(appId string, certificatePath string, environment string) {
-	c.Config = provisionConfig{AppId: appId, CertificatePath: certificatePath, Environment: environment}
-	configByteSlice, err := json.Marshal(c.Config)
-	if err != nil {
-		log.Fatal("invalid provisioning configuration")
-	}
+	postParams := make(url.Values)
+	postParams.Set("appId", appId)
+	postParams.Set("certificatePath", certificatePath)
+	postParams.Set("environment", environment)
 
-	reader := bytes.NewBufferString(string(configByteSlice))
-	_, err = http.Post(c.ServerHost+"/provision/", "application/json", reader)
+	_, err := http.PostForm(c.ServerHost+"/provision/", postParams)
 
 	if err != nil {
 		log.Fatal("provisioning was unsuccessful")

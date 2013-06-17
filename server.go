@@ -2,7 +2,6 @@ package apns
 
 import (
 	"crypto/tls"
-	"fmt"
 	"log"
 	"net/http"
 )
