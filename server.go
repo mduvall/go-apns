@@ -34,10 +34,10 @@ type service struct {
 	Connection  *tls.Conn
 }
 
-func StartServer(environment string, certificatePath string, port int) (err error) {
+func StartServer(environment string, port int) (err error) {
 	createdServer := &Server{}
 	host := getEnvironment(environment)
-	createdService, err := createdServer.newService(certificatePath, host)
+	createdService, err := createdServer.newService(host)
 	if err != nil {
 		return err
 	}
@@ -63,30 +63,36 @@ func (s *Server) setupRPC(port int) {
 
 func (s *Server) Provision(certificatePath string, reply *int) error {
 	s.APNSService.Certificate = certificatePath
+	s.initializeConnection()
 
 	return nil
 }
 
 func (s *Server) Notify(notification *Notification, reply *int) error {
+	if s.APNSService.Certificate == "" {
+		log.Fatal("the certificate needs to be provisioned by the client")
+	}
+
 	s.write(notification)
 
 	return nil
 }
 
 // Opens a TLS connection with the certificate
-func (*Server) initializeConnection(s *service) {
-	cert, err := tls.LoadX509KeyPair(s.Certificate, s.Certificate)
+func (s *Server) initializeConnection() {
+	service := s.APNSService
+	cert, err := tls.LoadX509KeyPair(service.Certificate, service.Certificate)
 	if err != nil {
-		log.Fatal("service is unable to load key at path ", s.Certificate)
+		log.Fatal("service is unable to load key at path ", service.Certificate)
 	}
 	config := tls.Config{Certificates: []tls.Certificate{cert}}
 
-	conn, err := tls.Dial("tcp", s.Host+":"+s.Port, &config)
+	conn, err := tls.Dial("tcp", service.Host+":"+service.Port, &config)
 	if err != nil {
-		log.Fatal("service is unable to connect to host at ", s.Host)
+		log.Fatal("service is unable to connect to host at ", service.Host)
 	}
 
-	s.Connection = conn
+	service.Connection = conn
 }
 
 func (s *Server) write(notification *Notification) (err error) {
@@ -102,9 +108,8 @@ func (s *Server) write(notification *Notification) (err error) {
 	return nil
 }
 
-func (s *Server) newService(filePath string, host string) (createdService *service, err error) {
-	createdService = &service{Certificate: filePath, Host: host, Port: APNS_SERVER_PORT}
-	s.initializeConnection(createdService)
+func (s *Server) newService(host string) (createdService *service, err error) {
+	createdService = &service{Host: host, Port: APNS_SERVER_PORT}
 
 	return createdService, nil
 }
