@@ -3,19 +3,19 @@ package apns
 import (
 	"log"
 	"net/rpc"
+	"strconv"
 )
 
 type Client struct {
-	ServerHost string
-	Client     *rpc.Client
+	Client *rpc.Client
 }
 
-func (c *Client) Configure(host string) {
-	c.ServerHost = host
-	client, err := rpc.DialHTTP("tcp", ":8080")
+func (c *Client) Configure(port int) {
+	portString := strconv.Itoa(port)
+	client, err := rpc.DialHTTP("tcp", ":"+portString)
 
 	if err != nil {
-		log.Fatal("unable to open client connection on localhost:8080")
+		log.Fatal("unable to open client connection on localhost:" + portString)
 	}
 
 	c.Client = client

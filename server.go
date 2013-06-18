@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"strconv"
 )
 
 const (
@@ -33,7 +34,7 @@ type service struct {
 	Connection  *tls.Conn
 }
 
-func StartServer(environment string, certificatePath string) (err error) {
+func StartServer(environment string, certificatePath string, port int) (err error) {
 	createdServer := &Server{}
 	host := getEnvironment(environment)
 	createdService, err := createdServer.newService(certificatePath, host)
@@ -42,16 +43,17 @@ func StartServer(environment string, certificatePath string) (err error) {
 	}
 
 	createdServer.APNSService = createdService
-	createdServer.setupRPC()
+	createdServer.setupRPC(port)
 
 	return nil
 }
 
-func (s *Server) setupRPC() {
+func (s *Server) setupRPC(port int) {
 	rpc.Register(s)
 	rpc.HandleHTTP()
 
-	listener, err := net.Listen("tcp", ":8080")
+	portString := strconv.Itoa(port)
+	listener, err := net.Listen("tcp", ":"+portString)
 	if err != nil {
 		log.Fatal("binding rpc to port 8080 failed")
 	}
