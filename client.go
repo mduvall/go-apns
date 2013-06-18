@@ -7,7 +7,7 @@ import (
 )
 
 type Client struct {
-	Client *rpc.Client
+	RpcClient *rpc.Client
 }
 
 func (c *Client) Configure(port int) {
@@ -18,16 +18,16 @@ func (c *Client) Configure(port int) {
 		log.Fatal("unable to open client connection on localhost:" + portString)
 	}
 
-	c.Client = client
+	c.RpcClient = client
 }
 
 func (c *Client) Provision(appId string, certificatePath string, environment string) {
-	if c.Client == nil {
+	if c.RpcClient == nil {
 		log.Fatal("configuration needs to be called first")
 	}
 
 	var reply int
-	err := c.Client.Call("Server.Provision", certificatePath, &reply)
+	err := c.RpcClient.Call("Server.Provision", certificatePath, &reply)
 
 	if err != nil {
 		log.Fatal("provisioning was unsuccessful")
@@ -35,12 +35,12 @@ func (c *Client) Provision(appId string, certificatePath string, environment str
 }
 
 func (c *Client) Notify(appId string, notification *Notification) {
-	if c.Client == nil {
+	if c.RpcClient == nil {
 		log.Fatal("configuration needs to be called first")
 	}
 
 	var reply int
-	err := c.Client.Call("Server.Notify", notification, &reply)
+	err := c.RpcClient.Call("Server.Notify", notification, &reply)
 
 	if err != nil {
 		log.Fatal("notification was unsuccessful")
