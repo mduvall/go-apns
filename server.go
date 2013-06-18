@@ -3,7 +3,9 @@ package apns
 import (
 	"crypto/tls"
 	"log"
+	"net"
 	"net/http"
+	"net/rpc"
 )
 
 const (
@@ -16,7 +18,7 @@ const (
 )
 
 // Provides generic configuration, provision of cert, and notification API
-type server struct {
+type Server struct {
 	FeedbackHost string
 	FeedbackPort int
 	APNSService  *service
@@ -31,44 +33,46 @@ type service struct {
 	Connection  *tls.Conn
 }
 
-func NewServer(environment string, filePath string) (createdServer *server, err error) {
-	createdServer = &server{}
+func StartServer(environment string, certificatePath string) (err error) {
+	createdServer := &Server{}
 	host := getEnvironment(environment)
-	createdService, err := createdServer.newService(filePath, host)
+	createdService, err := createdServer.newService(certificatePath, host)
 	if err != nil {
-		return nil, err
+		return err
 	}
+
 	createdServer.APNSService = createdService
-	createdServer.ListenForClients()
+	createdServer.setupRPC()
 
-	return createdServer, nil
+	return nil
 }
 
-func (s *server) ListenForClients() {
-	http.HandleFunc("/provision/", s.provisionHandler)
-	http.HandleFunc("/notify/", s.notificationHandler)
-	http.ListenAndServe(":8080", nil)
+func (s *Server) setupRPC() {
+	rpc.Register(s)
+	rpc.HandleHTTP()
+
+	listener, err := net.Listen("tcp", ":8080")
+	if err != nil {
+		log.Fatal("binding rpc to port 8080 failed")
+	}
+
+	http.Serve(listener, nil)
 }
 
-func (s *server) provisionHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	pf := r.PostForm
+func (s *Server) Provision(certificatePath string, reply *int) error {
+	s.APNSService.Certificate = certificatePath
 
-	_, certificatePath, _ := pf["appId"], pf["certificatePath"], pf["environment"]
-
-	s.APNSService.Certificate = certificatePath[0]
+	return nil
 }
 
-func (s *server) notificationHandler(w http.ResponseWriter, r *http.Request) {
-	r.ParseForm()
-	pf := r.PostForm
+func (s *Server) Notify(notification *Notification, reply *int) error {
+	s.write(notification)
 
-	notification := &Notification{Token: string(pf["token"][0]), Payload: []byte(pf["payload"][0]), Identifier: pf["identifier"][0]}
-	s.Write(notification)
+	return nil
 }
 
 // Opens a TLS connection with the certificate
-func (*server) initializeConnection(s *service) {
+func (*Server) initializeConnection(s *service) {
 	cert, err := tls.LoadX509KeyPair(s.Certificate, s.Certificate)
 	if err != nil {
 		log.Fatal("service is unable to load key at path ", s.Certificate)
@@ -83,7 +87,8 @@ func (*server) initializeConnection(s *service) {
 	s.Connection = conn
 }
 
-func (s *server) Write(notification *Notification) (err error) {
+func (s *Server) write(notification *Notification) (err error) {
+	// Arg is of type notification
 	notificationByteSlice := notification.constructBytePackage()
 	conn := s.APNSService.Connection
 
@@ -95,7 +100,7 @@ func (s *server) Write(notification *Notification) (err error) {
 	return nil
 }
 
-func (s *server) newService(filePath string, host string) (createdService *service, err error) {
+func (s *Server) newService(filePath string, host string) (createdService *service, err error) {
 	createdService = &service{Certificate: filePath, Host: host, Port: APNS_SERVER_PORT}
 	s.initializeConnection(createdService)
 

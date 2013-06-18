@@ -2,25 +2,32 @@ package apns
 
 import (
 	"log"
-	"net/http"
-	"net/url"
+	"net/rpc"
 )
 
 type Client struct {
 	ServerHost string
+	Client     *rpc.Client
 }
 
 func (c *Client) Configure(host string) {
 	c.ServerHost = host
+	client, err := rpc.DialHTTP("tcp", ":8080")
+
+	if err != nil {
+		log.Fatal("unable to open client connection on localhost:8080")
+	}
+
+	c.Client = client
 }
 
 func (c *Client) Provision(appId string, certificatePath string, environment string) {
-	postParams := make(url.Values)
-	postParams.Set("appId", appId)
-	postParams.Set("certificatePath", certificatePath)
-	postParams.Set("environment", environment)
+	if c.Client == nil {
+		log.Fatal("configuration needs to be called first")
+	}
 
-	_, err := http.PostForm(c.ServerHost+"/provision/", postParams)
+	var reply int
+	err := c.Client.Call("Server.Provision", certificatePath, &reply)
 
 	if err != nil {
 		log.Fatal("provisioning was unsuccessful")
@@ -28,14 +35,12 @@ func (c *Client) Provision(appId string, certificatePath string, environment str
 }
 
 func (c *Client) Notify(appId string, notification *Notification) {
-	// @TODO(mduvall): consolidate these param settings, not sure what to use here
-	postParams := make(url.Values)
-	postParams.Set("appId", appId)
-	postParams.Set("token", notification.Token)
-	postParams.Set("payload", string(notification.Payload))
-	postParams.Set("identifier", string(notification.Identifier))
+	if c.Client == nil {
+		log.Fatal("configuration needs to be called first")
+	}
 
-	_, err := http.PostForm(c.ServerHost+"/notify/", postParams)
+	var reply int
+	err := c.Client.Call("Server.Notify", notification, &reply)
 
 	if err != nil {
 		log.Fatal("notification was unsuccessful")
