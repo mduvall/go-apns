@@ -49,8 +49,10 @@ func StartServer(environment string, port int) (err error) {
 }
 
 func (s *Server) setupRPC(port int) {
-	rpc.Register(s)
-	rpc.HandleHTTP()
+	go func() {
+		rpc.Register(s)
+		rpc.HandleHTTP()
+	}()
 
 	portString := strconv.Itoa(port)
 	listener, err := net.Listen("tcp", ":"+portString)
@@ -73,7 +75,7 @@ func (s *Server) Notify(notification *Notification, reply *int) error {
 		log.Fatal("the certificate needs to be provisioned by the client")
 	}
 
-	s.write(notification)
+	go s.write(notification)
 
 	return nil
 }
