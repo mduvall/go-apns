@@ -21,7 +21,7 @@ Now that the client and server are ready to talk, we can build a notification cl
 ```go
 notification := &apns.Notification{
   Token:      "hexlified token",
-  Payload:    []byte(`{"aps":{"alert": "FLATBUSH"}}`),
+  Payload:    &apns.Payload{Type: "alert", Message: "FLATBUSH"},
   Identifier: "0",
 }
 c.Notify("Foo", notification)
