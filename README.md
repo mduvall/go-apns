@@ -14,7 +14,7 @@ c.Provision("Foo", "path_to_cert", "sandbox") // set the individual appId, path 
 ```    
 Once this setup is complete, the server will need to be running in another process. This allows for the use of multiple clients pushing to the server for the application while maintaining an open SSL connection to the APNS servers.
 ```go
-apns.StartServer("sandbox", "path_to_cert", 8080)
+apns.StartServer("sandbox", 8080)
 ```    
 Now that the client and server are ready to talk, we can build a notification client side with the hexlified device token, an APNS payload, and notification identifier. After that is initialized, send it off!
 
